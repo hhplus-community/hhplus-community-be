@@ -2,7 +2,7 @@ package org.hhplus.hhpluscommnunity.user.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.hhplus.hhpluscommnunity.user.dto.ResponseDto;
+import org.hhplus.hhpluscommnunity.jwt.JwtProvider;
 import org.hhplus.hhpluscommnunity.user.dto.UserDto;
 import org.hhplus.hhpluscommnunity.user.entity.User;
 import org.hhplus.hhpluscommnunity.user.repository.UserRepository;
@@ -14,9 +14,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final JwtProvider jwtProvider;
 
     @Transactional
-    public ResponseDto signup(UserDto.SignupRequestDto request) {
+    public void signup(UserDto.SignupRequest request) {
         checkDuplicateUsername(request);
 
         User user = User.builder()
@@ -25,11 +26,10 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
-        return ResponseDto.builder().message("회원가입에 성공했습니다.").build();
     }
 
     @Transactional
-    public ResponseDto login(UserDto.LoginRequestDto request) {
+    public String login(UserDto.LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
@@ -37,10 +37,10 @@ public class UserService {
             throw new IllegalArgumentException("회원을 찾을 수 없습니다.");
         }
 
-        return ResponseDto.builder().message("로그인에 성공했습니다.").build();
+        return jwtProvider.createToken(user.getUsername());
     }
 
-    private void checkDuplicateUsername(UserDto.SignupRequestDto request) {
+    private void checkDuplicateUsername(UserDto.SignupRequest request) {
         Optional<User> user = userRepository.findByUsername(request.getUsername());
         if (user.isPresent()) {
             throw new IllegalArgumentException("중복된 username 입니다.");
